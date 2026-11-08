@@ -285,7 +285,7 @@ void MainWindow::document_selected(int row) {
 
 void MainWindow::search_requested(const QString& query, int k) {
     // TODO
-    if (!corpus_current_ || query.trimmed().isEmpty()) {
+    if (!corpus_current() || query.trimmed().isEmpty()) {
         return;
     }
 
@@ -308,7 +308,7 @@ void MainWindow::query_changed(const QString& query) {
 
 void MainWindow::build_context_requested(int token_budget) {
     // TODO
-    if (!corpus_current_ || !search_widget_->has_query()) {
+    if (!corpus_current() || !search_widget_->has_query()) {
         return;
     }
     const std::vector<ContextItem> items = processing_core_.build_context(search_widget_->query().toStdString(), search_widget_->result_count(), static_cast<std::size_t>(token_budget));
@@ -334,7 +334,7 @@ void MainWindow::term_inspection_requested(const QString& term,
                                            const QString& chunk_id) {
     // TODO
     const QString trim = term.trimmed();
-    if (!corpus_current_ || trim.isEmpty()) {
+    if (!corpus_current() || trim.isEmpty()) {
         return;
     }
 
@@ -348,8 +348,9 @@ void MainWindow::term_inspection_requested(const QString& term,
 
 void MainWindow::reset_application() {
     // TODO
+    ++ws_version_;
     workspace_.clear();
-    corpus_current_ = false;
+    state_ = CorpusState::NotBuilt;
     const std::vector<Resettable*> comp = {workspace_widget_, search_widget_, term_inspector_widget_, context_widget_};
     for (Resettable* c : comp) {
         c->reset();
@@ -367,20 +368,22 @@ void MainWindow::exit_application() {
 
 void MainWindow::update_action_states() {
     // TODO
-    const bool process = corpus_current_ && search_widget_->has_query();
-    workspace_widget_->set_build_corpus_enabled(!workspace_.documents().empty());
+    const bool process = corpus_current() && search_widget_->has_query();
+    workspace_widget_->set_build_corpus_enabled(!worker_running_ && !workspace_.documents().empty());
     search_widget_->set_search_enabled(process);
     context_widget_->set_build_context_enabled(process);
-    term_inspector_widget_->set_inspection_enabled(corpus_current_);
+    term_inspector_widget_->set_inspection_enabled(corpus_current());
 }
 
 void MainWindow::invalidate_corpus() {
     // TODO
-    const bool curr = corpus_current_;
-    corpus_current_ = false;
     clear_processing_outputs();
-    if (curr) {
-        workspace_widget_->set_corpus_status("Corpus: Out of date, rebuild needed");
+    if (state_ == CorpusState::Current) {
+        state_ = CorpusState::Stale;
+        workspace_widget_->set_corpus_status("Corpus: Out of date, rebuild");
+    }
+    else if (state_ == CorpusState::Building) {
+        workspace_widget_->set_corpus_status("Corpus: Building... (workspace change)");
     }
     update_action_states();
 }
