@@ -159,7 +159,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     status_label_->setText("Ready");
 }
 
-Main::~MainWindow() {
+MainWindow::~MainWindow() {
     cancel_requested_.store(true);
     if (build_thread_.joinable()) { build_thread_.join(); }
 }
@@ -177,7 +177,7 @@ void MainWindow::set_build_function(BuildFunction func) noexcept {
     build_func_ = (func != nullptr) ? func : &default_build;
 }
 
-void MainWindow::add_document_file(const QString& path) {
+bool MainWindow::add_document_file(const QString& path) {
     const QFileInfo info(path);
     QFile file(path);
     if (!info.isFile() || !file.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -227,7 +227,7 @@ void MainWindow::build_corpus() {
         worker_running_ = false;
         build_future_ = std::future<BuildResult>();
         state_ = CorpusState::Stale;
-        workspace_widget_->set_corpus_status("Corpus: Build failed")
+        workspace_widget_->set_corpus_status("Corpus: Build failed");
         status_label_->setText("Corpus build failed " + QString::fromUtf8(e.what()));
         update_action_states();
         return;
@@ -267,7 +267,7 @@ void MainWindow::build_finished() {
     processing_core_ = std::move(*res.core);
     clear_processing_outputs();
     state_ = CorpusState::Current;
-    workspace_widget_->set_corpus_status(QString("Corpus: %1 chunks").arg(static_cast<qulongqulong>(processing_core_.chunk_count())));
+    workspace_widget_->set_corpus_status(QString("Corpus: %1 chunks").arg(static_cast<qulonglong>(processing_core_.chunk_count())));
     status_label_->setText("Corpus built");
     update_action_states();
 }

@@ -177,7 +177,7 @@ private:
     bool worker_running_{false};
 
     std::atomic<bool> cancel_requested_{false};
-    std::future<BuildReselt> build_future_;
+    std::future<BuildResult> build_future_;
     std::thread build_thread_;
 
     WorkspaceWidget* workspace_widget_{nullptr};
