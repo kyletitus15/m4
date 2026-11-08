@@ -222,6 +222,7 @@ void MainWindow::build_corpus() {
     state_ = CorpusState::Building;
     job_version_ = ws_version_;
     std::promise<BuildResult> promise;
+    build_future_ = promise.get_future();
     worker_running_ = true;
 
     try { build_thread_ = std::thread(run_build, workspace_, build_delay_, build_func_, &cancel_requested_, std::move(promise), this); 
@@ -230,7 +231,7 @@ void MainWindow::build_corpus() {
         build_future_ = std::future<BuildResult>();
         state_ = CorpusState::Stale;
         workspace_widget_->set_corpus_status("Corpus: Build failed");
-        status_label_->setText("Corpus build failed " + QString::fromUtf8(e.what()));
+        status_label_->setText("Corpus build failed: " + QString::fromUtf8(e.what()));
         update_action_states();
         return;
     }
@@ -273,7 +274,7 @@ void MainWindow::build_finished() {
     if (!res.error.empty() || !res.core) {
         state_ = ws_empty ? CorpusState::NotBuilt : CorpusState::Stale;
         workspace_widget_->set_corpus_status("Corpus: Build failed");
-        status_label_->setText("Corpus build failed" + QString::fromStdString(res.error.empty() ? "cancelled" : res.error));
+        status_label_->setText("Corpus build failed: " + QString::fromStdString(res.error.empty() ? "cancelled" : res.error));
         update_action_states();
         return;
     }
