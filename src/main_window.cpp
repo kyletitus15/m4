@@ -238,6 +238,15 @@ void MainWindow::build_corpus() {
     status_label_->setText("Building corpus...");
 }
 
+bool MainWindow::build_is_current(int job_v) const noexcept {
+    #ifdef AIWS_FAILURE_ACCEPT_STALE
+    (void)job_v;
+    return true;
+    #else
+    return job_v == ws_version_;
+    #endif
+}
+
 void MainWindow::build_finished() {
     if (!worker_running_ || !build_future_.valid()) { return;}
     BuildResult res = build_future_.get();
