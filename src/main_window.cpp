@@ -183,7 +183,7 @@ bool MainWindow::add_document_file(const QString& path) {
     if (!info.isFile() || !file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         return false;
     }
-    const QString txt = QString::fromUtf8(file.realAll());
+    const QString txt = QString::fromUtf8(file.readAll());
     file.close();
     const QString title = info.fileName();
 
