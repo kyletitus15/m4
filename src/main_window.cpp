@@ -253,7 +253,7 @@ void MainWindow::build_finished() {
     qDebug() << "GUI: build_finished called";
     if (!worker_running_ || !build_future_.valid()) { return;}
     BuildResult res = build_future_.get();
-    qDebug() << "got result; error =" << QString::fromStdString(result.error) << "core =" << (result.core != nullptr) << "job =" << job_version_ << "ws =" << workspace_version_;
+    qDebug() << "got result; error =" << QString::fromStdString(res.error) << "core =" << (res.core != nullptr) << "job =" << job_version_ << "ws =" << ws_version_;
     if (build_thread_.joinable()) { build_thread_.join();}
     worker_running_ = false;
     qDebug() << "worker_running_cleared";
