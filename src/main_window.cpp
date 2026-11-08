@@ -9,6 +9,7 @@
 #include <QPushButton>
 #include <QMetaObject>
 #include <QObject>
+#include <QDebug>
 
 
 #include <string>
@@ -75,6 +76,7 @@ namespace {
         const bool failed = !res.error.empty();
         promise.set_value(std::move(res));
         if (failed && kFailure) { return; }
+        qDebug() << "worker: posting build_finished";
         QMetaObject::invokeMethod(target, "build_finished", Qt::QueuedConnection);
     }
 
@@ -248,6 +250,7 @@ bool MainWindow::build_is_current(int job_v) const noexcept {
 }
 
 void MainWindow::build_finished() {
+    qDebug() << "GUI: build_finished called";
     if (!worker_running_ || !build_future_.valid()) { return;}
     BuildResult res = build_future_.get();
     if (build_thread_.joinable()) { build_thread_.join();}
