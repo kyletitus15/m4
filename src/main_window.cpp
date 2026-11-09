@@ -283,7 +283,7 @@ void MainWindow::build_finished() {
     update_action_states();
 }
 
-void remote_add(const QByteArray& path_bytes) {
+void MainWindow::remote_add(const QByteArray& path_bytes) {
     const QString path = QFile::decodeName(path_bytes);
     if (!add_document_file(path)) { status_label_->setText("Remote add failed: " + path); }
 }
