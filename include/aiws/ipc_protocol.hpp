@@ -93,3 +93,4 @@ inline bool read_exact(int fd, void* data, std::size_t n, Clock::time_point dead
     }
     return true;
 }
+}
