@@ -141,6 +141,8 @@ private slots:
 
     void build_finished();
 
+    void remote_add(const QByteArray& path_bytes);
+
 private:
 
     enum class CorpusState { NotBuilt, Building, Current, Stale};

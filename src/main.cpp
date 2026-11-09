@@ -1,4 +1,8 @@
 #include "aiws/gui/main_window.hpp"
+#ifdef AIWS_HAS_IPC
+#include "aiws/ipc_protocol.hpp"
+#include "aiws/ipc_server.hpp"
+#endif
 
 #include <QApplication>
 #include <QMessageBox>
@@ -6,6 +10,8 @@
 #include <QCommandLineOption>
 #include <QCommandLineParser>
 #include <QTextStream>
+#include <QFile>
+#include <string>
 
 // TODO: Define the ExitCallback function used to confirm an Exit request.
 namespace {
@@ -23,7 +29,9 @@ int main(int argc, char* argv[]) {
     QCommandLineParser parser;
     parser.addHelpOption();
     const QCommandLineOption delay("build-delay", "Extra build time per doc, in ms.", "ms", "0");
+    const QCommandLineOption ipc("ipc-socket", "Unix socket path for aiws_send (default /tmp/aiws-$USER.sock)", "path");
     parser.addOption(delay);
+    parser.addOption(ipc);
     parser.process(app);
 
     bool ok = false;
@@ -37,5 +45,15 @@ int main(int argc, char* argv[]) {
     window.set_build_delay_ms(d);
     window.set_exit_callback(&exit_page);
     window.show();
+
+    #ifdef AIWS_HAS_IPC
+        const std::string s = parser.isSet(ipc) ? QFile::encodeName(parser.value(ipc)).toStdString() : aiws::ipc::default_scoket_path();
+        aiws::ipc::IpcServer server(&window, s);
+        std::string ipc_error;
+        if (!server.start(ipc_error)) {
+            QTextStream(stderr) << "IPC disabled: " << QString::fromStdString(ipc_error) << "\n";
+        }
+    #endif
+
     return app.exec();
 }

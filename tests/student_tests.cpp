@@ -15,6 +15,16 @@
 #include <stdexcept>
 #include <thread>
 
+#ifdef AIWS_HAS_IPC
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/un.h>
+#include <unistd.h>
+#include <cstring>
+#include "aiws/ipc_protocol.hpp"
+#include "aiws/ipc_server.hpp"
+#endif
+
 #include "aiws/gui/main_window.hpp"
 
 using aiws::gui::MainWindow;
@@ -49,6 +59,84 @@ struct Fixture {
     QLineEdit* query() { return win.findChild<QLineEdit*>("queryEdit"); }
     QString corpus_text() { return label("corpusStatusLabel")->text(); }
 };
+
+#ifdef AIWS_HAS_IPC
+int connect_to(const std::string& path) {
+    sockaddr_un addr {};
+    addr.sun_family = AF_UNIX;
+    std::strncpy(addr.sun_path, path.c_str(), sizeof(addr.sun_path) - 1);
+    const int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0) { return -1; }
+    if (::connect(fd, reinterpret_cast<sockaddr*>(&addr), sizeof addr) != 0) { ::close(fd); return -1; }
+    timeval tv{3, 0};
+    ::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof tv);
+    return fd;
+}
+
+std::string request_bytes(const std::string& path) {
+    std::string r = "AIWS";
+    r.push_back(1);  // version
+    r.push_back(1);  // ADD
+    unsigned char len[4];
+    aiws::ipc::put_u32(len, static_cast<std::uint32_t>(path.size()));
+    r.append(reinterpret_cast<const char*>(len), 4);
+    return r + path;
+}
+
+void send_all(int fd, const std::string& s) {
+    std::size_t off = 0;
+    while (off < s.size()) {
+        const ssize_t w = ::send(fd, s.data() + off, s.size() - off, MSG_NOSIGNAL);
+        if (w <= 0) { return; }
+        off += static_cast<std::size_t>(w);
+    }
+}
+
+bool recv_all(int fd, void* buf, std::size_t n) {
+    char* p = static_cast<char*>(buf);
+    while (n > 0) {
+        const ssize_t got = ::recv(fd, p, n, 0);
+        if (got <= 0) { return false; }
+        p += got;
+        n -= static_cast<std::size_t>(got);
+    }
+    return true;
+}
+
+struct Reply { bool got{false}; int status{-1}; std::string text; };
+
+Reply read_reply(int fd) {
+    Reply rep;
+    unsigned char h[aiws::ipc::kReplyHeaderSize];
+    if (!recv_all(fd, h, sizeof h)) { return rep; }
+    std::string text(aiws::ipc::get_u32(h + 1), '\0');
+    if (!recv_all(fd, text.data(), text.size())) { return rep; }
+    rep.got = true;
+    rep.status = h[0];
+    rep.text = text;
+    return rep;
+}
+
+struct IpcFixture : Fixture {
+    std::unique_ptr<aiws::ipc::IpcServer> server;  // destroyed before `win` (reverse order)
+    std::string sock;
+    bool start() {
+        sock = QFile::encodeName(dir.filePath("s.sock")).toStdString();
+        server = std::make_unique<aiws::ipc::IpcServer>(&win, sock);
+        std::string err;
+        return server->start(err);
+    }
+    int docs() { return win.findChild<QListWidget*>("documentList")->count(); }
+    Reply send_add(const std::string& path) {
+        const int fd = connect_to(sock);
+        if (fd < 0) { return Reply{}; }
+        send_all(fd, request_bytes(path));
+        const Reply r = read_reply(fd);
+        ::close(fd);
+        return r;
+    }
+};
+#endif
 
 }  // namespace
 
@@ -152,6 +240,94 @@ private slots:
         win.reset();
         QVERIFY2(timer.elapsed() < 2000, "destructor should cancel and join quickly");
     }
+
+#ifdef AIWS_HAS_IPC
+    // E1
+    void ipc_add_valid_file() {
+        IpcFixture f;
+        QVERIFY(f.start());
+        const Reply r = f.send_add(QFile::encodeName(f.make_file()).toStdString());
+        QVERIFY(r.got);
+        QCOMPARE(r.status, 0);
+        QTRY_COMPARE_WITH_TIMEOUT(f.docs(), 1, 3000);
+    }
+
+    // E3: a request arriving in pieces, with pauses
+    void ipc_request_in_pieces() {
+        IpcFixture f;
+        QVERIFY(f.start());
+        const std::string req = request_bytes(QFile::encodeName(f.make_file()).toStdString());
+        const int fd = connect_to(f.sock);
+        QVERIFY(fd >= 0);
+        const std::size_t cuts[] = {3, 10, 14, req.size()};
+        std::size_t from = 0;
+        for (const std::size_t to : cuts) {
+            send_all(fd, req.substr(from, to - from));
+            from = to;
+            QTest::qSleep(100);
+        }
+        const Reply r = read_reply(fd);
+        ::close(fd);
+        QVERIFY(r.got);
+        QCOMPARE(r.status, 0);
+        QTRY_COMPARE_WITH_TIMEOUT(f.docs(), 1, 3000);
+    }
+
+    // E2: spaces, a newline, non-ASCII UTF-8 (run with LC_ALL=C.UTF-8)
+    void ipc_special_path_characters() {
+        IpcFixture f;
+        QVERIFY(f.start());
+        const QString path = f.dir.filePath(QString::fromUtf8("sp ace\nnew \xC3\xA9\xE2\x82\xAC.txt"));
+        QFile file(path);
+        if (!file.open(QIODevice::WriteOnly)) { QSKIP("filesystem/locale cannot create this name"); }
+        file.write("alpha");
+        file.close();
+        const Reply r = f.send_add(QFile::encodeName(path).toStdString());
+        QVERIFY(r.got);
+        QCOMPARE(r.status, 0);
+        QTRY_COMPARE_WITH_TIMEOUT(f.docs(), 1, 3000);
+    }
+
+    // E1: rejection
+    void ipc_rejects_unreadable_file() {
+        IpcFixture f;
+        QVERIFY(f.start());
+        const Reply r = f.send_add("/no/such/file.txt");
+        QVERIFY(r.got);
+        QCOMPARE(r.status, 1);
+        QVERIFY(!r.text.empty());
+        QTest::qWait(100);
+        QCOMPARE(f.docs(), 0);
+    }
+
+    // E1 + R2: a remote add during a build behaves like a local add
+    void ipc_add_during_build_discards_result() {
+        IpcFixture f;
+        QVERIFY(f.start());
+        g_release = false;
+        QVERIFY(f.win.add_document_file(f.make_file()));
+        f.button("buildCorpusButton")->click();
+        const Reply r = f.send_add(QFile::encodeName(f.make_file()).toStdString());
+        QVERIFY(r.got);
+        QCOMPARE(r.status, 0);
+        QTRY_COMPARE_WITH_TIMEOUT(f.docs(), 2, 3000);
+        g_release = true;
+        QTRY_VERIFY_WITH_TIMEOUT(f.button("buildCorpusButton")->isEnabled(), 3000);
+        QVERIFY(!f.corpus_text().contains("chunks"));
+    }
+
+    // E4: stops promptly and removes the socket file
+    void ipc_stop_is_prompt_and_removes_socket() {
+        IpcFixture f;
+        QVERIFY(f.start());
+        QCOMPARE(::access(f.sock.c_str(), F_OK), 0);
+        QElapsedTimer timer;
+        timer.start();
+        f.server->stop();
+        QVERIFY2(timer.elapsed() < 500, "server should stop within 500 ms");
+        QVERIFY(::access(f.sock.c_str(), F_OK) != 0);
+    }
+#endif
 };
 
 QTEST_MAIN(StudentTests)

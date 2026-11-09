@@ -9,7 +9,7 @@
 #include <QPushButton>
 #include <QMetaObject>
 #include <QObject>
-#include <QDebug>
+#include <QByteArray>
 
 
 #include <string>
@@ -76,7 +76,6 @@ namespace {
         const bool failed = !res.error.empty();
         promise.set_value(std::move(res));
         if (failed && kFailure) { return; }
-        qDebug() << "worker: posting build_finished";
         QMetaObject::invokeMethod(target, "build_finished", Qt::QueuedConnection);
     }
 
@@ -251,13 +250,10 @@ bool MainWindow::build_is_current(int job_v) const noexcept {
 }
 
 void MainWindow::build_finished() {
-    qDebug() << "GUI: build_finished called";
     if (!worker_running_ || !build_future_.valid()) { return;}
     BuildResult res = build_future_.get();
-    qDebug() << "got result; error =" << QString::fromStdString(res.error) << "core =" << (res.core != nullptr) << "job =" << job_version_ << "ws =" << ws_version_;
     if (build_thread_.joinable()) { build_thread_.join();}
     worker_running_ = false;
-    qDebug() << "worker_running_cleared";
     const bool ws_empty = workspace_.documents().empty();
 
     if (!build_is_current(job_version_)) {
@@ -286,6 +282,12 @@ void MainWindow::build_finished() {
     status_label_->setText("Corpus built");
     update_action_states();
 }
+
+void remote_add(const QByteArray& path_bytes) {
+    const QString path = QFile::decodeName(path_bytes);
+    if (!add_document_file(path)) { status_label_->setText("Remote add failed: " + path); }
+}
+
 
 void MainWindow::document_selected(int row) {
     // TODO

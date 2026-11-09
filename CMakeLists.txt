@@ -42,6 +42,26 @@ add_library(aiws_app STATIC
     include/aiws/gui/term_inspector_widget.hpp
     include/aiws/gui/search_result_model.hpp
 )
+
+if(UNIX)
+    add_library(aiws_ipc STATIC
+        src/ipc_server.cpp
+        include/aiws/ipc_server.hpp
+        include/aiws/ipc_protocol.hpp
+    )
+    target_include_directories(aiws_ipc PUBLIC include)
+    target_link_libraries(aiws_ipc PUBLIC Qt6::Core Threads::Threads)
+    target_compile_options(aiws_ipc PRIVATE -Wall -Wextra -Wpedantic)
+
+    target_link_libraries(aiws_app PUBLIC aiws_ipc)
+    target_compile_definitions(aiws_app PUBLIC AIWS_HAS_IPC=1)
+
+    add_executable(aiws_send tools/aiws_send.cpp)
+    target_include_directories(aiws_send PRIVATE include)
+    target_compile_options(aiws_send PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+
 target_include_directories(aiws_app PUBLIC include)
 target_link_libraries(aiws_app PUBLIC aiws_m2 Qt6::Widgets)
 target_compile_options(aiws_app PRIVATE -Wall -Wextra -Wpedantic)

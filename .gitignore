@@ -1,3 +1,12 @@
 build/
 *.o
 .DS_Store
+CMakeUserPresets.json
+CMakeLists.txt.user
+.vscode/
+.idea/
+*.exe
+*.obj
+*.a
+*.user
+*_autogen/
