@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
     window.show();
 
     #ifdef AIWS_HAS_IPC
-        const std::string s = parser.isSet(ipc) ? QFile::encodeName(parser.value(ipc)).toStdString() : aiws::ipc::default_scoket_path();
+        const std::string s = parser.isSet(ipc) ? QFile::encodeName(parser.value(ipc)).toStdString() : aiws::ipc::default_socket_path();
         aiws::ipc::IpcServer server(&window, s);
         std::string ipc_error;
         if (!server.start(ipc_error)) {
