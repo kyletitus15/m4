@@ -1,0 +1,184 @@
+// HISTORY.txt, the output of git log --stat --date=iso, showing work across both weeks
+
+PS C:\Users\kylet\AppliedSWDesign\AI Workspace\m4> git log --stat --date=iso
+commit e323018e6bd12aa03bc911ba3e1bb29e7b7086a5 (HEAD -> main, origin/main)
+Author: Kyle Titus <kyletitus15@vt.edu>
+Date:   2026-11-08 23:30:06 -0500
+
+    fixed error in remote_add function
+
+ src/main_window.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+commit a52dff82528c4f7a912d6347ed2329323bd15ab7
+Author: Kyle Titus <kyletitus15@vt.edu>
+Date:   2026-11-08 23:26:37 -0500
+
+    forget ending curly brace
+
+ include/aiws/ipc_protocol.hpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+commit 36a025d9345a1f0715acf05cd18a14d37abdca18
+Author: Kyle Titus <kyletitus15@vt.edu>
+Date:   2026-11-08 23:23:20 -0500
+
+    added HISTORY.txt
+
+ HISTORY.txt | 0
+ 1 file changed, 0 insertions(+), 0 deletions(-)
+
+commit ee1bfb8f9ebcedc12e0682a0d97bb6529fcda640
+Author: Kyle Titus <kyletitus15@vt.edu>
+Date:   2026-11-08 23:17:01 -0500
+
+    finished DESIGN.md and all files related to IPC
+
+ .gitignore                       |   9 ++
+ CMakeLists.txt                   |  20 +++++
+ DESIGN.md                        |  30 +++++++
+ include/aiws/gui/main_window.hpp |   2 +
+ include/aiws/ipc_protocol.hpp    |  95 +++++++++++++++++++++
+ include/aiws/ipc_server.hpp      |  34 ++++++++
+ src/ipc_server.cpp               | 152 +++++++++++++++++++++++++++++++++
+ src/main.cpp                     |  18 ++++
+ src/main_window.cpp              |  12 +--
+ tests/student_tests.cpp          | 176 +++++++++++++++++++++++++++++++++++++++
+ tools/aiws_send.cpp              | 120 ++++++++++++++++++++++++++
+ 11 files changed, 663 insertions(+), 5 deletions(-)
+
+commit 4d8858b0705bb43c92478a395449eb8ad80a6d7c
+Author: Kyle Titus <kyletitus15@vt.edu>
+Date:   2026-11-08 17:37:00 -0500
+
+    added debug
+
+ src/main_window.cpp | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+commit 00971ff60c2caf4e6f38058ada4726573bdeff29
+Author: Kyle Titus <kyletitus15@vt.edu>
+Date:   2026-11-08 17:26:17 -0500
+
+    added debug
+
+ src/main_window.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+commit 19b932290014f906d04b31c2481a67e810a52144
+Author: Kyle Titus <kyletitus15@vt.edu>
+Date:   2026-11-08 17:24:54 -0500
+
+    added debug
+
+ src/main_window.cpp | 2 ++
+ 1 file changed, 2 insertions(+)
+
+commit 5f549cbf988fa30dab6e18a622e26775b901db3e
+Author: Kyle Titus <kyletitus15@vt.edu>
+Date:   2026-11-08 17:17:26 -0500
+
+    added debug
+
+ src/main_window.cpp | 3 +++
+ 1 file changed, 3 insertions(+)
+
+commit 92307ab29de8f7943f0104c14f397fb39d18d610
+Author: Kyle Titus <kyletitus15@vt.edu>
+Date:   2026-11-08 16:43:46 -0500
+
+    fixed errors
+
+ src/main_window.cpp | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+commit 14a25166d4eebb204020b0d5fed9bc15580f9668
+Author: Kyle Titus <kyletitus15@vt.edu>
+Date:   2026-11-08 16:40:05 -0500
+
+    fixed errors
+
+ src/main_window.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+commit 753eafc8c150da0b67d5d25f199faf532deaaf3e
+Author: Kyle Titus <kyletitus15@vt.edu>
+Date:   2026-11-08 16:38:57 -0500
+
+    fixed errors
+
+ include/aiws/gui/main_window.hpp | 2 +-
+ src/main_window.cpp              | 8 ++++----
+ 2 files changed, 5 insertions(+), 5 deletions(-)
+
+commit 0cf2e644c0ff75735ee0b60ebe7ad92233e1ae4c
+Author: Kyle Titus <kyletitus15@vt.edu>
+Date:   2026-11-08 15:53:54 -0500
+
+    forgot to commit the test file
+
+ tests/student_tests.cpp | 158 +++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 157 insertions(+), 1 deletion(-)
+
+commit 3b255fabb80a093d8d385beda112ddd87f2fed2f
+Author: Kyle Titus <kyletitus15@vt.edu>
+Date:   2026-11-08 15:49:44 -0500
+
+    finished main_window.cpp, main.cpp
+
+ src/main.cpp        | 17 +++++++++++++++++
+ src/main_window.cpp | 25 ++++++++++++++-----------
+ 2 files changed, 31 insertions(+), 11 deletions(-)
+
+commit 250ab6d09ec7c85fe20d8ad05adbe26c203d5ebc
+Author: Kyle Titus <kyletitus15@vt.edu>
+Date:   2026-11-08 00:13:40 -0500
+
+    init commit, finished mainwindow.hpp, started work on mainwindow.cpp
+
+ .gitignore                                 |   3 +
+ CMakeLists.txt                             |  57 +++++
+ DESIGN.md                                  |   3 +
+ DESIGN_NOTE.md                             |  36 +++
+ STARTER_README.pdf                         | Bin 0 -> 39600 bytes
+ data/public/doc_ai.txt                     |   3 +
+ data/public/doc_retrieval.txt              |   3 +
+ data/public/doc_systems.txt                |   3 +
+ data/public/queries.txt                    |   4 +
+ include/aiws/chunker.hpp                   |  25 ++
+ include/aiws/chunking_strategy.hpp         |  18 ++
+ include/aiws/context_builder.hpp           |  13 +
+ include/aiws/context_strategy.hpp          |  17 ++
+ include/aiws/corpus_index.hpp              |  36 +++
+ include/aiws/document.hpp                  |  22 ++
+ include/aiws/gui/context_widget.hpp        |  75 ++++++
+ include/aiws/gui/main_window.hpp           | 192 ++++++++++++++
+ include/aiws/gui/resettable.hpp            |  22 ++
+ include/aiws/gui/search_result_model.hpp   |  84 ++++++
+ include/aiws/gui/search_widget.hpp         | 105 ++++++++
+ include/aiws/gui/term_inspector_widget.hpp |  81 ++++++
+ include/aiws/gui/workspace_widget.hpp      | 101 ++++++++
+ include/aiws/processing_core.hpp           |  53 ++++
+ include/aiws/processing_types.hpp          |  38 +++
+ include/aiws/retrieval_engine.hpp          |  18 ++
+ include/aiws/retrieval_strategy.hpp        |  20 ++
+ include/aiws/text_processor.hpp            |  29 +++
+ include/aiws/workspace.hpp                 |  19 ++
+ src/chunker.cpp                            |  59 +++++
+ src/context_builder.cpp                    |  29 +++
+ src/context_widget.cpp                     | 136 ++++++++++
+ src/corpus_index.cpp                       |  72 ++++++
+ src/document.cpp                           |  14 +
+ src/main.cpp                               |  24 ++
+ src/main_window.cpp                        | 396 +++++++++++++++++++++++++++++
+ src/processing_core.cpp                    | 110 ++++++++
+ src/retrieval_engine.cpp                   |  86 +++++++
+ src/search_result_model.cpp                | 101 ++++++++
+ src/search_widget.cpp                      | 193 ++++++++++++++
+ src/term_inspector_widget.cpp              |  96 +++++++
+ src/text_processor.cpp                     | 116 +++++++++
+ src/workspace.cpp                          |  17 ++
+ src/workspace_widget.cpp                   | 113 ++++++++
+ tests/student_tests.cpp                    |   2 +
+ 44 files changed, 2644 insertions(+)
+(END)
