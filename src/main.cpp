@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
     QCommandLineParser parser;
     parser.addHelpOption();
-    const QCommandLineOption delay("build-delay", "Extra build time per doc, in ms.", "ms", "0");
+    const QCommandLineOption delay("build-delay-ms", "Extra build time per doc, in ms.", "ms", "0");
     const QCommandLineOption ipc("ipc-socket", "Unix socket path for aiws_send (default /tmp/aiws-$USER.sock)", "path");
     parser.addOption(delay);
     parser.addOption(ipc);
@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
     bool ok = false;
     const int d = parser.value(delay).toInt(&ok);
     if (!ok || d < 0) {
-        QTextStream(stderr) << "----build-delay needs a non-negative integer\n";
+        QTextStream(stderr) << "--build-delay-ms needs a non-negative integer\n";
         return 2;
     } 
 

@@ -158,7 +158,7 @@ private slots:
         QCOMPARE(f.win.findChild<QListWidget*>("documentList")->count(), 0);
     }
 
-    // R1: if the build ran on the GUI thread, click() would block forever here.
+    // R1
     void gui_stays_usable_during_build() {
         Fixture f;
         g_release = false;
@@ -178,7 +178,7 @@ private slots:
         QVERIFY(f.button("searchButton")->isEnabled());
     }
 
-    // R2 / fault AIWS_FAULT_ACCEPT_STALE
+    // R2 
     void add_during_build_discards_result() {
         Fixture f;
         g_release = false;
@@ -192,7 +192,7 @@ private slots:
         QVERIFY(!f.button("searchButton")->isEnabled());
     }
 
-    // R2 / fault AIWS_FAULT_ACCEPT_STALE
+    // R2 
     void reset_during_build_discards_result() {
         Fixture f;
         g_release = false;
@@ -208,7 +208,7 @@ private slots:
         QVERIFY(!f.button("searchButton")->isEnabled());
     }
 
-    // R3 / fault AIWS_FAULT_LOSE_FAILURE
+    // R3
     void failed_build_is_reported_and_app_recovers() {
         Fixture f;
         g_fail = true;
