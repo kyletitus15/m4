@@ -1,7 +1,44 @@
 // HISTORY.txt, the output of git log --stat --date=iso, showing work across both weeks
 
 PS C:\Users\kylet\AppliedSWDesign\AI Workspace\m4> git log --stat --date=iso
-commit e323018e6bd12aa03bc911ba3e1bb29e7b7086a5 (HEAD -> main, origin/main)
+commit 2aaab396ba39570143415e2e33919d8760428097 (HEAD -> main, origin/main)
+Author: Kyle Titus <kyletitus15@vt.edu>
+Date:   2026-11-08 23:52:43 -0500
+
+    fixed bugs
+
+ src/main.cpp            | 4 ++--
+ tests/student_tests.cpp | 8 ++++----
+ 2 files changed, 6 insertions(+), 6 deletions(-)
+
+commit 877105574764820a1d145c11f43324f3e76242bd
+Author: Kyle Titus <kyletitus15@vt.edu>
+Date:   2026-11-08 23:45:08 -0500
+
+    fixed syntax error
+
+ src/main.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+commit 1fd2012e49378eb6469fbcef9f1a647f09a9081e
+Author: Kyle Titus <kyletitus15@vt.edu>
+Date:   2026-11-08 23:42:47 -0500
+
+    forgot an >
+
+ src/ipc_server.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+commit a9c4d6151c52c29ee2111007b1d1d73895c062b1
+Author: Kyle Titus <kyletitus15@vt.edu>
+Date:   2026-11-08 23:40:12 -0500
+
+    updated HISTORY.txt
+
+ HISTORY.txt | 184 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 184 insertions(+)
+
+commit e323018e6bd12aa03bc911ba3e1bb29e7b7086a5
 Author: Kyle Titus <kyletitus15@vt.edu>
 Date:   2026-11-08 23:30:06 -0500
 
@@ -181,4 +218,3 @@ Date:   2026-11-08 00:13:40 -0500
  src/workspace_widget.cpp                   | 113 ++++++++
  tests/student_tests.cpp                    |   2 +
  44 files changed, 2644 insertions(+)
-(END)
