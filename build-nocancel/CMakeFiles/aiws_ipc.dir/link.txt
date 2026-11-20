@@ -1,0 +1,2 @@
+/usr/bin/ar qc libaiws_ipc.a CMakeFiles/aiws_ipc.dir/aiws_ipc_autogen/mocs_compilation.cpp.o CMakeFiles/aiws_ipc.dir/src/ipc_server.cpp.o
+/usr/bin/ranlib libaiws_ipc.a

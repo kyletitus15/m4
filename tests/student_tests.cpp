@@ -14,6 +14,8 @@
 #include <memory>
 #include <stdexcept>
 #include <thread>
+#include <mutex>
+#include <vector>
 
 #ifdef AIWS_HAS_IPC
 #include <sys/socket.h>
@@ -33,11 +35,20 @@ namespace {
 
 std::atomic<bool> g_release{true};  // false = the build blocks until released
 std::atomic<bool> g_fail{false};    // true = the build throws
+std::atomic<int> g_finished{0};              // gated_build calls that returned
+std::mutex g_ids_mutex;
+std::vector<std::thread::id> g_build_threads;
+
+void recording_build(const aiws::Workspace& ws, aiws::ProcessingCore& core) {
+    { std::lock_guard<std::mutex> lock(g_ids_mutex); g_build_threads.push_back(std::this_thread::get_id()); }
+    core.rebuild(ws);
+}
 
 void gated_build(const aiws::Workspace& ws, aiws::ProcessingCore& core) {
     while (!g_release.load()) { std::this_thread::sleep_for(std::chrono::milliseconds(1)); }
     if (g_fail.load()) { throw std::runtime_error("injected failure"); }
     core.rebuild(ws);
+    ++g_finished;
 }
 
 struct Fixture {
@@ -143,7 +154,11 @@ struct IpcFixture : Fixture {
 class StudentTests : public QObject {
     Q_OBJECT
 private slots:
-    void init() { g_release = true; g_fail = false; }
+    void init() { 
+        g_release = true; g_fail = false; 
+        g_finished = 0;
+        { std::lock_guard<std::mutex> lock(g_ids_mutex); g_build_threads.clear(); } 
+    }
 
     void startup_state() {
         Fixture f;
@@ -186,7 +201,8 @@ private slots:
         f.button("buildCorpusButton")->click();
         QVERIFY(f.win.add_document_file(f.make_file()));
         g_release = true;
-        QTRY_VERIFY_WITH_TIMEOUT(f.button("buildCorpusButton")->isEnabled(), 3000);
+        QTRY_VERIFY_WITH_TIMEOUT(g_finished.load() >= 1, 3000);
+        QTest::qWait(100);
         QVERIFY(!f.corpus_text().contains("chunks"));
         f.query()->setText("alpha");
         QVERIFY(!f.button("searchButton")->isEnabled());
@@ -200,9 +216,10 @@ private slots:
         f.button("buildCorpusButton")->click();
         f.button("resetButton")->click();
         QVERIFY(f.win.add_document_file(f.make_file()));
-        QVERIFY(!f.button("buildCorpusButton")->isEnabled());  // worker still running
+        QVERIFY(f.button("buildCorpusButton")->isEnabled());   // the unwanted build no longer blocks a request
         g_release = true;
-        QTRY_VERIFY_WITH_TIMEOUT(f.button("buildCorpusButton")->isEnabled(), 3000);
+        QTRY_VERIFY_WITH_TIMEOUT(g_finished.load() >= 1, 3000);
+        QTest::qWait(100);                                     // let the queued build_finished run
         QVERIFY(!f.corpus_text().contains("chunks"));
         f.query()->setText("alpha");
         QVERIFY(!f.button("searchButton")->isEnabled());
@@ -312,7 +329,8 @@ private slots:
         QCOMPARE(r.status, 0);
         QTRY_COMPARE_WITH_TIMEOUT(f.docs(), 2, 3000);
         g_release = true;
-        QTRY_VERIFY_WITH_TIMEOUT(f.button("buildCorpusButton")->isEnabled(), 3000);
+        QTRY_VERIFY_WITH_TIMEOUT(g_finished.load() >= 1, 3000);
+        QTest::qWait(100);
         QVERIFY(!f.corpus_text().contains("chunks"));
     }
 
@@ -328,6 +346,58 @@ private slots:
         QVERIFY(::access(f.sock.c_str(), F_OK) != 0);
     }
 #endif
+
+    // R1: every build runs on the same worker thread, never the GUI thread
+    void all_builds_use_one_worker_thread() {
+        Fixture f;
+        f.win.set_build_function(&recording_build);
+        QVERIFY(f.win.add_document_file(f.make_file()));
+        f.button("buildCorpusButton")->click();
+        QTRY_VERIFY_WITH_TIMEOUT(f.corpus_text().contains("chunks"), 3000);
+        QVERIFY(f.win.add_document_file(f.make_file()));       // corpus is stale now
+        f.button("buildCorpusButton")->click();
+        QTRY_VERIFY_WITH_TIMEOUT(f.corpus_text().contains("chunks"), 3000);
+        std::lock_guard<std::mutex> lock(g_ids_mutex);
+        QCOMPARE(g_build_threads.size(), std::size_t(2));
+        QVERIFY(g_build_threads[0] == g_build_threads[1]);
+        QVERIFY(g_build_threads[0] != std::this_thread::get_id());
+    }
+
+    // R3: a build made useless stops early; the next build does not wait for it
+    // (catches AIWS_FAULT_NO_CANCEL)
+    void next_build_does_not_wait_for_cancelled_build() {
+        Fixture f;
+        f.win.set_build_function(nullptr);        // real build path with simulated delay
+        f.win.set_build_delay_ms(5000);           // one document = 5 s of simulated work
+        QVERIFY(f.win.add_document_file(f.make_file()));
+        f.button("buildCorpusButton")->click();
+        QTest::qWait(200);                        // worker has started its long wait
+        QVERIFY(f.win.add_document_file(f.make_file()));   // that build is now useless
+        f.win.set_build_delay_ms(0);
+        QVERIFY(f.button("buildCorpusButton")->isEnabled());
+        f.button("buildCorpusButton")->click();
+        QTRY_VERIFY_WITH_TIMEOUT(f.corpus_text().contains("chunks"), 2000);
+    }
+
+    // R4: Exit with no build running still stops the worker
+    // (catches AIWS_FAULT_SILENT_SHUTDOWN; with the fault the destructor hangs and ctest's timeout kills it)
+    void exit_with_idle_worker_is_prompt() {
+        auto win = std::make_unique<MainWindow>();
+        QTemporaryDir dir;
+        const QString path = dir.filePath("a.txt");
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("alpha beta");
+        file.close();
+        QVERIFY(win->add_document_file(path));
+        win->findChild<QPushButton*>("buildCorpusButton")->click();
+        QTRY_VERIFY_WITH_TIMEOUT(win->findChild<QLabel*>("corpusStatusLabel")->text().contains("chunks"), 3000);
+        QTest::qWait(100);                        // worker is back in cv_.wait
+        QElapsedTimer timer;
+        timer.start();
+        win.reset();
+        QVERIFY2(timer.elapsed() < 2000, "idle worker should stop and join quickly");
+    }
 };
 
 QTEST_MAIN(StudentTests)

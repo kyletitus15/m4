@@ -1,0 +1,7 @@
+# Hashes of file build rules.
+4557c1e590442b3d2295d8b1bdb29f18 CMakeFiles/ai_workspace_m5_autogen
+5c36f827987382d48c355c8608d0e3c8 CMakeFiles/aiws_app_autogen
+bae58c51ccd75e8aa1c230a6d81ae2d9 CMakeFiles/aiws_ipc_autogen
+b64931131e1260b19bd42b0193075a2a CMakeFiles/aiws_m2_autogen
+afbc5b54b2a492fae736edc4c28e0759 CMakeFiles/aiws_send_autogen
+3f367cbf9f33d4667e295f0b16301c1a CMakeFiles/student_tests_autogen
