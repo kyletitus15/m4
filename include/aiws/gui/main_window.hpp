@@ -4,6 +4,7 @@
 
 #include "aiws/processing_core.hpp"
 #include "aiws/workspace.hpp"
+#include "aiws/gui/build_worker.hpp"
 
 #include <atomic>
 #include <memory>
@@ -23,13 +24,6 @@ class SearchWidget;
 class TermInspectorWidget;
 class WorkspaceWidget;
 
-struct BuildResult {
-    std::unique_ptr<ProcessingCore> core;
-    std::string error;
-    bool cancelled{false};
-};
-
-using BuildFunction = void (*)(const Workspace& snapshot, ProcessingCore& core);
 
 /**
  * @brief Main application window and coordinator for the M3 AI Workspace GUI.
@@ -178,10 +172,6 @@ private:
     BuildFunction build_func_{nullptr};
     bool worker_running_{false};
 
-    std::atomic<bool> cancel_requested_{false};
-    std::future<BuildResult> build_future_;
-    std::thread build_thread_;
-
     WorkspaceWidget* workspace_widget_{nullptr};
     SearchWidget* search_widget_{nullptr};
     TermInspectorWidget* term_inspector_widget_{nullptr};
@@ -189,6 +179,7 @@ private:
     QLabel* status_label_{nullptr};
     QPushButton* reset_button_{nullptr};
     QPushButton* exit_button_{nullptr};
+    BuildWorker* worker_{this};
 };
 
 }  // namespace aiws::gui

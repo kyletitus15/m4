@@ -28,55 +28,15 @@
 #include "aiws/gui/search_widget.hpp"
 #include "aiws/gui/term_inspector_widget.hpp"
 #include "aiws/gui/workspace_widget.hpp"
+#include "aiws/gui/build_worker.hpp"
 
 namespace aiws::gui {
 
 namespace {
 
-    constexpr int kSleepMs = 10;
-    #ifdef AIWS_FAULT_LOSE_FAILURE
-    constexpr bool kFailure = true;
-    #else
-    constexpr bool kFailure = false;
-    #endif
 
     void default_build(const Workspace& snapshot, ProcessingCore& core) {
         core.rebuild(snapshot);
-    }
-
-    bool simulate_delay(long long total_ms, const std::atomic<bool>* cancel) {
-        long long left = total_ms;
-        while (left > 0) {
-            if (cancel->load()) { return false; }
-            const long long step = std::min<long long>(left, kSleepMs);
-            std::this_thread:: sleep_for(std::chrono::milliseconds(step));
-            left = left - step;
-        }
-        return !cancel->load();
-    }
-
-    void run_build(Workspace snapshot, int delay, BuildFunction function, const std::atomic<bool>* cancel, std::promise<BuildResult> promise, QObject* target) {
-        BuildResult res;
-        try {
-            const long long total = static_cast<long long>(delay) * static_cast<long long>(snapshot.documents().size());
-            if (!simulate_delay(total, cancel)) {
-                res.cancelled = true;
-            }
-            else {
-                auto core = std::make_unique<ProcessingCore>();
-                function(snapshot, *core);
-                res.core = std::move(core);
-            }
-        } catch (const std::exception& e) {
-            res.error = e.what();
-            if (res.error.empty()) { res.error = "build failed"; }
-        } catch (...) {
-            res.error = "unknown error";
-        }
-        const bool failed = !res.error.empty();
-        promise.set_value(std::move(res));
-        if (failed && kFailure) { return; }
-        QMetaObject::invokeMethod(target, "build_finished", Qt::QueuedConnection);
     }
 
 } //namespace
@@ -161,8 +121,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 }
 
 MainWindow::~MainWindow() {
-    cancel_requested_.store(true);
-    if (build_thread_.joinable()) { build_thread_.join(); }
+    worker_->shutdown();
 }
 
 void MainWindow::set_exit_callback(ExitCallback callback) noexcept {
@@ -220,21 +179,8 @@ void MainWindow::build_corpus() {
     clear_processing_outputs();
     state_ = CorpusState::Building;
     job_version_ = ws_version_;
-    std::promise<BuildResult> promise;
-    build_future_ = promise.get_future();
     worker_running_ = true;
-
-    try { build_thread_ = std::thread(run_build, workspace_, build_delay_, build_func_, &cancel_requested_, std::move(promise), this); 
-    } catch (const std::exception& e) {
-        worker_running_ = false;
-        build_future_ = std::future<BuildResult>();
-        state_ = CorpusState::Stale;
-        workspace_widget_->set_corpus_status("Corpus: Build failed");
-        status_label_->setText("Corpus build failed: " + QString::fromUtf8(e.what()));
-        update_action_states();
-        return;
-    }
-
+    worker_->submit(workspace_, build_delay_, build_func);
     workspace_widget_->set_corpus_status("Corpus: Building...");
     update_action_states();
     status_label_->setText("Building corpus...");
@@ -250,9 +196,9 @@ bool MainWindow::build_is_current(int job_v) const noexcept {
 }
 
 void MainWindow::build_finished() {
-    if (!worker_running_ || !build_future_.valid()) { return;}
-    BuildResult res = build_future_.get();
-    if (build_thread_.joinable()) { build_thread_.join();}
+    std::optional<BuildResult> out = worker_->take_result();
+    if (!worker_running_ || !out) { return;}
+    BuildResult res = std::move(*out);
     worker_running_ = false;
     const bool ws_empty = workspace_.documents().empty();
 
