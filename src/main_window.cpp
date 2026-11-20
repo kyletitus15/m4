@@ -34,7 +34,6 @@ namespace aiws::gui {
 
 namespace {
 
-
     void default_build(const Workspace& snapshot, ProcessingCore& core) {
         core.rebuild(snapshot);
     }
@@ -153,10 +152,8 @@ bool MainWindow::add_document_file(const QString& path) {
     } catch (const std::exception&) {
         return false;
     }
-    ++ws_version_;
     workspace_widget_->add_document(title);
-    invalidate_corpus();
-    update_action_states();
+    apply(state_->on_workspace_changed(*this));
     status_label_->setText("Added document: " + title);
     return true;
 }
@@ -171,62 +168,24 @@ void MainWindow::add_document() {
     }
 }
 
-void MainWindow::build_corpus() {
-    // TODO
-    if (workspace_.documents().empty() || worker_running_) {
-        return;
+void MainWindow::apply(std::unique_ptr<CorpusState> next) {
+    if (next) {
+        state_ = std::move(next);
+        state_->on_enter(*this);
     }
-    clear_processing_outputs();
-    state_ = CorpusState::Building;
-    job_version_ = ws_version_;
-    worker_running_ = true;
-    worker_.submit(workspace_, build_delay_, build_func_);
-    workspace_widget_->set_corpus_status("Corpus: Building...");
     update_action_states();
-    status_label_->setText("Building corpus...");
 }
 
-bool MainWindow::build_is_current(int job_v) const noexcept {
-    #ifdef AIWS_FAILURE_ACCEPT_STALE
-    (void)job_v;
-    return true;
-    #else
-    return job_v == ws_version_;
-    #endif
+void MainWindow::build_corpus() {
+    // TODO
+    apply(state_->on_build_requested(*this));
 }
+
 
 void MainWindow::build_finished() {
     std::optional<BuildResult> out = worker_.take_result();
-    if (!worker_running_ || !out) { return;}
-    BuildResult res = std::move(*out);
-    worker_running_ = false;
-    const bool ws_empty = workspace_.documents().empty();
-
-    if (!build_is_current(job_version_)) {
-        state_ = ws_empty ? CorpusState::NotBuilt : CorpusState::Stale;
-        if (!ws_empty) {
-            workspace_widget_->set_corpus_status("Corpus: Out of date, rebuild needed");
-            status_label_->setText("Discarded out-of-date build, rebuild needed");
-        }
-        update_action_states();
-        return;
-    }
-
-    //r3
-    if (!res.error.empty() || !res.core) {
-        state_ = ws_empty ? CorpusState::NotBuilt : CorpusState::Stale;
-        workspace_widget_->set_corpus_status("Corpus: Build failed");
-        status_label_->setText("Corpus build failed: " + QString::fromStdString(res.error.empty() ? "cancelled" : res.error));
-        update_action_states();
-        return;
-    }
-
-    processing_core_ = std::move(*res.core);
-    clear_processing_outputs();
-    state_ = CorpusState::Current;
-    workspace_widget_->set_corpus_status(QString("Corpus: %1 chunks").arg(static_cast<qulonglong>(processing_core_.chunk_count())));
-    status_label_->setText("Corpus built");
-    update_action_states();
+    if (!out) { return;}
+    apply(state_->on_build_finished(*this, *out));
 }
 
 void MainWindow::remote_add(const QByteArray& path_bytes) {
@@ -311,9 +270,8 @@ void MainWindow::term_inspection_requested(const QString& term,
 
 void MainWindow::reset_application() {
     // TODO
-    ++ws_version_;
     workspace_.clear();
-    state_ = CorpusState::NotBuilt;
+    apply(state_->on_reset(*this));
     const std::vector<Resettable*> comp = {workspace_widget_, search_widget_, term_inspector_widget_, context_widget_};
     for (Resettable* c : comp) {
         c->reset();
@@ -332,23 +290,10 @@ void MainWindow::exit_application() {
 void MainWindow::update_action_states() {
     // TODO
     const bool process = corpus_current() && search_widget_->has_query();
-    workspace_widget_->set_build_corpus_enabled(!worker_running_ && !workspace_.documents().empty());
+    workspace_widget_->set_build_corpus_enabled(state_->can_build() && !workspace_.documents().empty());
     search_widget_->set_search_enabled(process);
     context_widget_->set_build_context_enabled(process);
     term_inspector_widget_->set_inspection_enabled(corpus_current());
-}
-
-void MainWindow::invalidate_corpus() {
-    // TODO
-    clear_processing_outputs();
-    if (state_ == CorpusState::Current) {
-        state_ = CorpusState::Stale;
-        workspace_widget_->set_corpus_status("Corpus: Out of date, rebuild");
-    }
-    else if (state_ == CorpusState::Building) {
-        workspace_widget_->set_corpus_status("Corpus: Building... (workspace change)");
-    }
-    update_action_states();
 }
 
 void MainWindow::clear_processing_outputs() {
@@ -358,5 +303,15 @@ void MainWindow::clear_processing_outputs() {
     term_inspector_widget_->clear_statistics();
     term_inspector_widget_->set_selected_chunk(QString());
 }
+
+bool MainWindow::workspace_empty() const { return workspace_.documents().empty(); }
+std::uint64_t MainWindow::start_build() { return worker_.submit(workspace_, build_delay_, build_func_); }
+void MainWindow::cancel_build() { worker_.cancel(); }
+void MainWindow::install_corpus(ProcessingCore&& core) { processing_core_ = std::move(core); clear_processing_outputs(); }
+std::size_t MainWindow::chunk_count() const { return processing_core_.chunk_count(); }
+void MainWindow::clear_outputs() { clear_processing_outputs(); }
+void MainWindow::show_corpus_label(const QString& text) { workspace_widget_->set_corpus_status(text); }
+void MainWindow::show_status(const QString& text) { status_label_->setText(text); }
+
 
 }  // namespace aiws::gui

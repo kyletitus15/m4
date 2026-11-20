@@ -48,7 +48,10 @@ void BuildWorker::shutdown() {
         std::lock_guard<std::mutex> lock(mutex_);
         stop_ = true;
     }
-    cv_.notify_all();                       // wakes an idle worker
+    #ifndef AIWS_FAULT_SILENT_SHUTDOWN
+        cv_.notify_all();                  
+    #endif
+    
     thread_.join();
 }
 
@@ -57,14 +60,21 @@ bool BuildWorker::still_wanted(std::uint64_t id) const noexcept {
 }
 
 bool BuildWorker::wait_build_time(std::uint64_t id, long long total_ms) const {
+    (void)id;
     long long left = total_ms;
     while (left > 0) {
+#ifndef AIWS_FAULT_NO_CANCEL
         if (!still_wanted(id)) { return false; }
+#endif
         const long long step = std::min(left, kSleepMs);
         std::this_thread::sleep_for(std::chrono::milliseconds(step));   // simulated build time only
         left -= step;
     }
+#ifdef AIWS_FAULT_NO_CANCEL
+    return true;
+#else
     return still_wanted(id);
+#endif
 }
 
 BuildResult BuildWorker::execute(const Request& request) {

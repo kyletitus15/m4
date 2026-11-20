@@ -5,12 +5,14 @@
 #include "aiws/processing_core.hpp"
 #include "aiws/workspace.hpp"
 #include "aiws/gui/build_worker.hpp"
+#include "aiws/gui/corpus_state.hpp"
 
 #include <atomic>
 #include <memory>
 #include <string>
 #include <thread>
 #include <future>
+#include <optional>
 
 class QLabel;
 class QPushButton;
@@ -32,7 +34,7 @@ class WorkspaceWidget;
  * major GUI components, and coordinates application-wide state changes and
  * backend operations in response to component events.
  */
-class MainWindow final : public QMainWindow {
+class MainWindow final : public QMainWindow, private CorpusContext {
     Q_OBJECT
 
 public:
@@ -139,38 +141,25 @@ private slots:
 
 private:
 
-    enum class CorpusState { NotBuilt, Building, Current, Stale};
     /**
      * @brief Updates availability of actions that depend on current application state.
      */
     void update_action_states();
 
-    /**
-     * @brief Marks the processing corpus as no longer current for the workspace.
-     *
-     * Processing output that depends on the previous corpus is no longer made
-     * available after invalidation.
-     */
-    void invalidate_corpus();
 
     /**
      * @brief Clears displayed search and context output that depends on processing state.
      */
     void clear_processing_outputs();
 
-    bool corpus_current() const noexcept { return state_ == CorpusState::Current; }
-    bool build_is_current(int job_version) const noexcept;
+    bool corpus_current() const noexcept { return state_->corpus_current(); }
 
     Workspace workspace_;
     ProcessingCore processing_core_;
-    bool corpus_current_{false};
     ExitCallback exit_callback_{nullptr};
-    CorpusState state_{CorpusState::NotBuilt};
-    int ws_version_{0}; //++ on accepted add & on reset
-    int job_version_{0}; // == ws_version when build starts
+    std::unique_ptr<CorpusState> state_{std::make_unique<NotBuiltState>()};
     int build_delay_{0};
     BuildFunction build_func_{nullptr};
-    bool worker_running_{false};
 
     WorkspaceWidget* workspace_widget_{nullptr};
     SearchWidget* search_widget_{nullptr};
@@ -180,6 +169,18 @@ private:
     QPushButton* reset_button_{nullptr};
     QPushButton* exit_button_{nullptr};
     BuildWorker worker_{this};
+
+    void apply(std::unique_ptr<CorpusState> next);
+
+    // CorpusContext
+    bool workspace_empty() const override;
+    std::uint64_t start_build() override;
+    void cancel_build() override;
+    void install_corpus(ProcessingCore&& core) override;
+    std::size_t chunk_count() const override;
+    void clear_outputs() override;
+    void show_corpus_label(const QString& text) override;
+    void show_status(const QString& text) override;
 };
 
 }  // namespace aiws::gui

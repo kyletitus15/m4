@@ -33,6 +33,7 @@ add_library(aiws_app STATIC
     src/term_inspector_widget.cpp
     src/search_result_model.cpp
     src/build_worker.cpp
+    src/corpus_state.cpp
     include/aiws/gui/main_window.hpp
     include/aiws/gui/resettable.hpp
     include/aiws/gui/workspace_widget.hpp
@@ -41,6 +42,7 @@ add_library(aiws_app STATIC
     include/aiws/gui/term_inspector_widget.hpp
     include/aiws/gui/search_result_model.hpp
     include/aiws/gui/build_worker.hpp
+    include/aiws/gui/corpus_state.hpp
 )
 
 if(UNIX)

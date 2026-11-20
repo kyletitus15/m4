@@ -1,33 +1,58 @@
-# M4 Decision Record
+# M5 Design
 
-See specification Section 8.
+# 1. M4 Fixes
+Only the M4 fault test AIWS_FAILURE_ACCEPT_STALE failed; M5 no longer builds the M4 switches, so I did not debug it. M5 deletes build_is_current() and the version counters: stale results are now rejected by job id in BuildingState::on_build_finished().
 
-# 1. Threads and ownership
-- GUI thread: MainWindow (all slots, build_corpus, build_finished, remote_add, reset_application, add_document_file), workspace_widget, search_widget, context_widget, term_inspector_widget, workspace_, processing_core_, state_, ws_version_, job_version_, worker_running_.
-- Worker thread: 'run_build()' function, works only on its own Workspace copy and a new ProcessingCore. Started by build_corpus(), joined by build_finished() or ~MainWindow().
-- IPC server thread (one): IpcServer::run()/serve_one() in src/ipc_server.cpp, started by
-  IpcServer::start(), joined by IpcServer::stop() (called from ~IpcServer).
+# 2. Threads and shared data
+- GUI thread: widgets, MainWindow, every CorpusState object, next_id_
+- Worker thread: BuildWorker::run(). One std::thread, started in the BuildWorker constructor, joined in BuildWorker::shutdown() (called from ~MainWindow)
 
-# 2. Validity of finished build
-MainWindow::build_is_current(job_version): true only if job_version == ws_version_. ws_version_ increments in add_document_file() and reset_application(). build_finished() calls this first: if they aren't the same version, the result is discarded. If the build was current, it is reported as failed.
+Shared data: 
+- pending_, finished_, stop_: each thread touches them only while holding mutex_. stop_ is the cv_ predicate, so changing it unlocked could lose a wakeup.
+- wanted_id_ (std::atomic<uint64_t>): the GUI stores, the worker loads between 10 ms sleeps. One independent value, so no lock is needed.
+Nothing else is shared: a request carries a copy of the Workspace, and the worker builds its own ProcessingCore.
 
-# 3. Changes since checkpoint
-- Reset and Add do not cancel a running worker, only can be done by destructor (cancel flag). Version check is the only thing that makes build valid. 
-- Failure is shown in the status and corpus labels instead of a dialog
-- Build is disabled with worker_running_ = true, and that stays true until build_finished() is joined to the thread (only one worker at a time)
-- Added test seam so tests can block/fail a build
-- Add Document was split into 2 functions: add_document() & add_document_file()
+# 3. States
+NotBuilt:
+  - build requested: -> Building
+  - workspace changed: stay
+  - reset: -> NotBuilt
+  - build finished: ignore
+Building:
+  - build requested: ignore
+  - workspace changed: cancel -> Stale
+  - reset: cancel -> NotBuilt
+  - build finished: if id matches -> Current, if error -> Stale, if id differs: ignore
+Current:
+  - build requested: -> Building
+  - workspace changed: -> Stale
+  - reset: -> NotBuilt
+  - build finished: ignore
+Stale:
+  - build requested: -> Building
+  - workspace changed: stay
+  - reset: -> NotBuilt
+  - build finished: ignore
 
-# 4: CR-1 impact
-- New: IpcServer, ipc_protocol.hpp, tools/aiws_send.cpp, slot (MainWindow::remote_add(QByteArray)), --ipc-socket in main.cpp
-- Changed: main.cpp -> now starts the server, MainWindow -> now has remote_add()
-- Unchanged and why: add_document_file(), build_corpus(), build_finished(), build_is_current(). A remote add is just add_document_file() called from a queued slot, which already bumps ws_version_ and invalidates the corpus, so R2 holds with no new code
+Exit is not a state event: ~MainWindow calls shutdown() in any state
 
-# 5. Fault switches
-- AIWS_FAULT_ACCEPT_STALE: MainWindow::build_is_current() in src/main_window.cpp, caught by add_during_build_discards_result and reset_during_build_discards_result
-- AIWS_FAULT_LOSE_FAILURE: run_build() in src/main_window.cpp (skips the queued post on failure), caught by failed_build_is_reported_and_app_recovers
+# 4. Sequence: Build, Add Document, Build, Exit
+1. GUI: build_corpus(), NotBuiltState::on_build_requested(), BuildWorker::submit() sets wanted_id_=1, fills pending_, notifies.
+2. Worker: run() leaves cv_.wait, takes pending_, execute(), wait_build_time().
+3. GUI: add_document_file(), BuildingState::on_workspace_changed(), BuildWorker::cancel() (wanted_id_=2); state Stale.
+4. GUI: Build, StaleState::on_build_requested(), submit() (id 3). No waiting.
+5. Worker: sees the id change within 10 ms, returns cancelled, stores finished_ under the lock, queues build_finished, then takes request 3.
+6. GUI: build_finished(), BuildingState(3)::on_build_finished() ignores job 1; job 3 becomes Current.
+7. GUI: Exit, ~MainWindow, shutdown() bumps wanted_id_, sets stop_ under the lock, notify_all(), join().
 
-# Pair programming log
-- Partner: Shaheer Tareen
-- Session 1: 11/8/26, 2:00-2:30, on my code, we worked on aiws_send.cpp, I started as driver for 15 min, then we swapped roles and worked for 15 more min.
-- Session 2: 11/8/26, 2:30-3:00, on his code, we worked on aiws_send.cpp, he started as driver for 15 min, then we swapped roles and worked for 15 more min.
+# 5. Decisions
+1. Build during a build: not allowed. BuildingState::can_build() is false and on_build_requested() is ignored. Add or Reset leaves Building first, so the next request is accepted at once.
+2. Remote add mid-build: add_document_file() calls BuildingState::on_workspace_changed(), which calls BuildWorker::cancel(). State becomes Stale; the user sees "Corpus: Out of date, rebuild needed".
+3. Shared data: the four items in section 2. Requests and results must cross threads (mutex); cancel needs a lock-free read between sleeps (atomic); stop_ must share the mutex with cv_.
+
+# 6. Fault switches
+- AIWS_FAULT_NO_CANCEL: in BuildWorker::wait_build_time() the wanted_id_ check is compiled out. Caught by TEST_NAME_1.
+- AIWS_FAULT_SILENT_SHUTDOWN: BuildWorker::shutdown() skips cv_.notify_all(). Caught by TEST_NAME_2 (hangs, killed by the ctest timeout).
+
+# 7. AI use
+AI was used to refine code, find syntax/logic errors, and write tests.
