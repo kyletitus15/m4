@@ -121,7 +121,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 }
 
 MainWindow::~MainWindow() {
-    worker_->shutdown();
+    worker_.shutdown();
 }
 
 void MainWindow::set_exit_callback(ExitCallback callback) noexcept {
@@ -180,7 +180,7 @@ void MainWindow::build_corpus() {
     state_ = CorpusState::Building;
     job_version_ = ws_version_;
     worker_running_ = true;
-    worker_->submit(workspace_, build_delay_, build_func);
+    worker_.submit(workspace_, build_delay_, build_func_);
     workspace_widget_->set_corpus_status("Corpus: Building...");
     update_action_states();
     status_label_->setText("Building corpus...");
@@ -196,7 +196,7 @@ bool MainWindow::build_is_current(int job_v) const noexcept {
 }
 
 void MainWindow::build_finished() {
-    std::optional<BuildResult> out = worker_->take_result();
+    std::optional<BuildResult> out = worker_.take_result();
     if (!worker_running_ || !out) { return;}
     BuildResult res = std::move(*out);
     worker_running_ = false;

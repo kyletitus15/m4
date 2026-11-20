@@ -179,7 +179,7 @@ private:
     QLabel* status_label_{nullptr};
     QPushButton* reset_button_{nullptr};
     QPushButton* exit_button_{nullptr};
-    BuildWorker* worker_{this};
+    BuildWorker worker_{this};
 };
 
 }  // namespace aiws::gui
