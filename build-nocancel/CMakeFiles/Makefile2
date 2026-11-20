@@ -120,8 +120,8 @@ CMakeFiles/aiws_m2.dir/clean:
 # Target rules for target CMakeFiles/aiws_app.dir
 
 # All Build rule for target.
-CMakeFiles/aiws_app.dir/all: CMakeFiles/aiws_ipc.dir/all
 CMakeFiles/aiws_app.dir/all: CMakeFiles/aiws_m2.dir/all
+CMakeFiles/aiws_app.dir/all: CMakeFiles/aiws_ipc.dir/all
 CMakeFiles/aiws_app.dir/all: CMakeFiles/aiws_app_autogen.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/aiws_app.dir/build.make CMakeFiles/aiws_app.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/aiws_app.dir/build.make CMakeFiles/aiws_app.dir/build
@@ -200,9 +200,9 @@ CMakeFiles/aiws_send.dir/clean:
 # Target rules for target CMakeFiles/ai_workspace_m5.dir
 
 # All Build rule for target.
+CMakeFiles/ai_workspace_m5.dir/all: CMakeFiles/aiws_m2.dir/all
 CMakeFiles/ai_workspace_m5.dir/all: CMakeFiles/aiws_app.dir/all
 CMakeFiles/ai_workspace_m5.dir/all: CMakeFiles/aiws_ipc.dir/all
-CMakeFiles/ai_workspace_m5.dir/all: CMakeFiles/aiws_m2.dir/all
 CMakeFiles/ai_workspace_m5.dir/all: CMakeFiles/ai_workspace_m5_autogen.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ai_workspace_m5.dir/build.make CMakeFiles/ai_workspace_m5.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ai_workspace_m5.dir/build.make CMakeFiles/ai_workspace_m5.dir/build
@@ -229,9 +229,9 @@ CMakeFiles/ai_workspace_m5.dir/clean:
 # Target rules for target CMakeFiles/student_tests.dir
 
 # All Build rule for target.
+CMakeFiles/student_tests.dir/all: CMakeFiles/aiws_m2.dir/all
 CMakeFiles/student_tests.dir/all: CMakeFiles/aiws_app.dir/all
 CMakeFiles/student_tests.dir/all: CMakeFiles/aiws_ipc.dir/all
-CMakeFiles/student_tests.dir/all: CMakeFiles/aiws_m2.dir/all
 CMakeFiles/student_tests.dir/all: CMakeFiles/student_tests_autogen.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/student_tests.dir/build.make CMakeFiles/student_tests.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/student_tests.dir/build.make CMakeFiles/student_tests.dir/build
@@ -284,8 +284,8 @@ CMakeFiles/aiws_m2_autogen.dir/clean:
 # Target rules for target CMakeFiles/aiws_app_autogen.dir
 
 # All Build rule for target.
-CMakeFiles/aiws_app_autogen.dir/all: CMakeFiles/aiws_ipc.dir/all
 CMakeFiles/aiws_app_autogen.dir/all: CMakeFiles/aiws_m2.dir/all
+CMakeFiles/aiws_app_autogen.dir/all: CMakeFiles/aiws_ipc.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/aiws_app_autogen.dir/build.make CMakeFiles/aiws_app_autogen.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/aiws_app_autogen.dir/build.make CMakeFiles/aiws_app_autogen.dir/build
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/mnt/build-nocancel/CMakeFiles --progress-num=15 "Built target aiws_app_autogen"

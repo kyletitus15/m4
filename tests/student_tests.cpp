@@ -36,6 +36,7 @@ namespace {
 std::atomic<bool> g_release{true};  // false = the build blocks until released
 std::atomic<bool> g_fail{false};    // true = the build throws
 std::atomic<int> g_finished{0};              // gated_build calls that returned
+std::atomic<int> g_started{0};
 std::mutex g_ids_mutex;
 std::vector<std::thread::id> g_build_threads;
 
@@ -45,6 +46,7 @@ void recording_build(const aiws::Workspace& ws, aiws::ProcessingCore& core) {
 }
 
 void gated_build(const aiws::Workspace& ws, aiws::ProcessingCore& core) {
+    ++g_started;
     while (!g_release.load()) { std::this_thread::sleep_for(std::chrono::milliseconds(1)); }
     if (g_fail.load()) { throw std::runtime_error("injected failure"); }
     core.rebuild(ws);
@@ -156,6 +158,7 @@ class StudentTests : public QObject {
 private slots:
     void init() { 
         g_release = true; g_fail = false; 
+        g_started = 0;
         g_finished = 0;
         { std::lock_guard<std::mutex> lock(g_ids_mutex); g_build_threads.clear(); } 
     }
@@ -199,6 +202,7 @@ private slots:
         g_release = false;
         QVERIFY(f.win.add_document_file(f.make_file()));
         f.button("buildCorpusButton")->click();
+        QTRY_VERIFY_WITH_TIMEOUT(g_started.load() >= 1, 3000);
         QVERIFY(f.win.add_document_file(f.make_file()));
         g_release = true;
         QTRY_VERIFY_WITH_TIMEOUT(g_finished.load() >= 1, 3000);
@@ -214,12 +218,13 @@ private slots:
         g_release = false;
         QVERIFY(f.win.add_document_file(f.make_file()));
         f.button("buildCorpusButton")->click();
+        QTRY_VERIFY_WITH_TIMEOUT(g_started.load() >= 1, 3000);   // worker is inside the build
         f.button("resetButton")->click();
         QVERIFY(f.win.add_document_file(f.make_file()));
-        QVERIFY(f.button("buildCorpusButton")->isEnabled());   // the unwanted build no longer blocks a request
+        QVERIFY(f.button("buildCorpusButton")->isEnabled());     // the unwanted build no longer blocks a request
         g_release = true;
         QTRY_VERIFY_WITH_TIMEOUT(g_finished.load() >= 1, 3000);
-        QTest::qWait(100);                                     // let the queued build_finished run
+        QTest::qWait(100);                                       // let the queued build_finished run
         QVERIFY(!f.corpus_text().contains("chunks"));
         f.query()->setText("alpha");
         QVERIFY(!f.button("searchButton")->isEnabled());
@@ -324,6 +329,7 @@ private slots:
         g_release = false;
         QVERIFY(f.win.add_document_file(f.make_file()));
         f.button("buildCorpusButton")->click();
+        QTRY_VERIFY_WITH_TIMEOUT(g_started.load() >= 1, 3000);
         const Reply r = f.send_add(QFile::encodeName(f.make_file()).toStdString());
         QVERIFY(r.got);
         QCOMPARE(r.status, 0);

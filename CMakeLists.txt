@@ -43,6 +43,7 @@ add_library(aiws_app STATIC
     include/aiws/gui/search_result_model.hpp
     include/aiws/gui/build_worker.hpp
     include/aiws/gui/corpus_state.hpp
+    
 )
 
 if(UNIX)
@@ -76,4 +77,4 @@ enable_testing()
 add_executable(student_tests tests/student_tests.cpp)
 target_link_libraries(student_tests PRIVATE aiws_app Qt6::Test)
 add_test(NAME student_tests COMMAND student_tests)
-set_tests_properties(student_tests PROPERTIES TIMEOUT 60 ENVIRONMENT QT_QPA_PLATFORM=offscreen)
+set_tests_properties(student_tests PROPERTIES TIMEOUT 30 ENVIRONMENT QT_QPA_PLATFORM=offscreen)

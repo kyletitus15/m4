@@ -5,4 +5,4 @@
 # This file includes the relevant testing commands required for 
 # testing this directory and lists subdirectories to be tested as well.
 add_test(student_tests "/mnt/build-nocancel/student_tests")
-set_tests_properties(student_tests PROPERTIES  ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT "60" _BACKTRACE_TRIPLES "/mnt/CMakeLists.txt;78;add_test;/mnt/CMakeLists.txt;0;")
+set_tests_properties(student_tests PROPERTIES  ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT "60" _BACKTRACE_TRIPLES "/mnt/CMakeLists.txt;79;add_test;/mnt/CMakeLists.txt;0;")

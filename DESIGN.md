@@ -51,8 +51,7 @@ Exit is not a state event: ~MainWindow calls shutdown() in any state
 3. Shared data: the four items in section 2. Requests and results must cross threads (mutex); cancel needs a lock-free read between sleeps (atomic); stop_ must share the mutex with cv_.
 
 # 6. Fault switches
-- AIWS_FAULT_NO_CANCEL: in BuildWorker::wait_build_time() the wanted_id_ check is compiled out. Caught by TEST_NAME_1.
-- AIWS_FAULT_SILENT_SHUTDOWN: BuildWorker::shutdown() skips cv_.notify_all(). Caught by TEST_NAME_2 (hangs, killed by the ctest timeout).
-
+- `AIWS_FAULT_SILENT_SHUTDOWN`: `BuildWorker::shutdown()` skips `cv_.notify_all()`, so the idle worker never wakes and `join()` hangs. Every test that destroys a `MainWindow` hangs (first: `startup_state`); the dedicated test is `exit_with_idle_worker_is_prompt`. ctest's timeout turns the hang into a failure.
+- `AIWS_FAULT_NO_CANCEL`: in `BuildWorker::wait_build_time()` the `wanted_id_` check is compiled out. Caught by `next_build_does_not_wait_for_cancelled_build`.
 # 7. AI use
 AI was used to refine code, find syntax/logic errors, and write tests.

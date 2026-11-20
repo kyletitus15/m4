@@ -10,3 +10,4 @@ CMakeLists.txt.user
 *.a
 *.user
 *_autogen/
+build-*/
