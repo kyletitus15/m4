@@ -1,4 +1,5 @@
 build/
+build-nocancel/
 *.o
 .DS_Store
 CMakeUserPresets.json
@@ -11,3 +12,5 @@ CMakeLists.txt.user
 *.user
 *_autogen/
 build-*/
+build-*/
+build*/
