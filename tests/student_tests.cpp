@@ -370,7 +370,6 @@ private slots:
     }
 
     // R3: a build made useless stops early; the next build does not wait for it
-    // (catches AIWS_FAULT_NO_CANCEL)
     void next_build_does_not_wait_for_cancelled_build() {
         Fixture f;
         f.win.set_build_function(nullptr);        // real build path with simulated delay
@@ -386,7 +385,6 @@ private slots:
     }
 
     // R4: Exit with no build running still stops the worker
-    // (catches AIWS_FAULT_SILENT_SHUTDOWN; with the fault the destructor hangs and ctest's timeout kills it)
     void exit_with_idle_worker_is_prompt() {
         auto win = std::make_unique<MainWindow>();
         QTemporaryDir dir;
