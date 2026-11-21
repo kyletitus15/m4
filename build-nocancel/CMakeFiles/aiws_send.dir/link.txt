@@ -1,1 +1,0 @@
-/usr/bin/c++ -DAIWS_FAULT_NO_CANCEL CMakeFiles/aiws_send.dir/aiws_send_autogen/mocs_compilation.cpp.o CMakeFiles/aiws_send.dir/tools/aiws_send.cpp.o -o aiws_send 
